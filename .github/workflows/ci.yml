@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Equicord build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Equicord sits at the workspace root; the plugin goes where the README's
+      # manual install puts it.
+      - name: Check out Equicord
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: Equicord/Equicord
+          ref: main
+
+      - name: Check out plugin
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          path: src/userplugins/hideOwnStreamPreview
+
+      - name: Set up pnpm and install Equicord
+        uses: pnpm/setup@fa36a5ef7dcdefc3a7cb25655c122e00cf6e636e # v3.1.2
+        with:
+          runtime: node@v24
+          require-lockfile: true
+
+      - name: Build Equicord with the plugin
+        run: pnpm build --dev
+
+      - name: Type-check
+        run: pnpm testTsc
